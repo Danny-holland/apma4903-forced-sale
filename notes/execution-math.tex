@@ -1,0 +1,378 @@
+\documentclass[11pt]{article}
+\newcommand{\headertitle}{APMA 4903}
+\input{preamble.tex}
+\hypersetup{pdftitle={The cost of a forced sale}}
+
+\fancyhead[R]{\small\color{muted}4 November 2026}
+\fancyfoot[L]{\small\color{muted}Daniel Holland}
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\headrule}{}
+  \renewcommand{\footrulewidth}{0.35pt}
+  \renewcommand{\footrule}{\FootRule}
+  \fancyfoot[L]{\small\color{muted}Daniel Holland}
+  \fancyfoot[R]{\small\color{muted}\thepage}
+}
+
+\begin{document}
+\thispagestyle{plain}
+
+{\LARGE\bfseries\color{navy}The cost of a forced sale}\par\vspace{0.35em}
+{\large\color{navy!80!black}Liquidating a pension shortfall when the book remembers yesterday's trade.}\par\vspace{0.7em}
+Daniel Holland\par
+{\small\color{muted}with Allison Duffy and Jasmine Li \quad APMA 4903 \quad 4 November 2026}\par\vspace{0.8em}
+
+A shortfall of \(Q\) dollars is sold as \(X = Q/S_0\) shares. Allison's reserve formula prices that sale with Almgren--Chriss at risk aversion zero, which is the case in which the book has refilled before the next trade. Jasmine converts a cost per dollar of shortfall into a tolerance for how often the reserve may be short. Both need the bill. The half-life of the book is the piece the refill formula does not have. The program is \texttt{execution/}. The tables below are \texttt{python execution/report.py}.
+
+\section{The sale}
+
+The fund sells \(X\) shares over \(N\) days, \(\tau\) a day, \(T = N\tau\). The arrival price is \(S_0\). There is no signal about the next return, so the unaffected price is the Almgren--Chriss martingale, without their permanent-impact term,
+\begin{equation}
+\label{eq:price}
+S_k = S_{k-1} + \sigma\sqrt{\tau}\,\xi_k, \qquad \xi_k \sim N(0,1).
+\end{equation}
+The sale is finished by the deadline: \(x_0 = X\), \(x_N = 0\), and \(n_k = x_{k-1} - x_k \geq 0\).
+
+The reserve slide converts dollars to shares at the arrival price, \(X = Q/S_0\), rather than at the cash the sale actually raises. That is the conversion used here.
+
+Two Almgren--Chriss terms sit on the bill and do not change the trades. A fee of \(\varepsilon\) dollars per share adds \(\varepsilon X\). In the continuous-time accounting on the reserve slide, linear permanent impact adds \(\gamma X^{2}/2\) for every completed sale. The discrete identity moves an \(O(\tau)\) piece of that impact into the temporary coefficient; the slide drops it, and so does \eqref{eq:bill}. Both terms are the same for every schedule that sells the whole block, so the dynamic program ignores them and they are added when the bill is reported. The tables set \(\varepsilon = \gamma = 0\). On the illustrative sale a one-cent fee is \(1{,}000\) dollars, \(2.00\) basis points, and a permanent move of ten cents on the whole block is \(5{,}000\) dollars, \(10.00\) basis points, on top of every row.
+
+\section{The book}
+\label{sec:book}
+
+The book is Obizhaeva and Wang's block-shaped book, density \(q\) shares per dollar. A displacement \(y \geq 0\) means our own selling has pushed the mid \(y\) dollars below the unaffected price. Selling \(n\) shares walks the book from \(y\) to \(y + n/q\), and the fund is filled at the average of that walk. Against the unaffected price at the start of the bar, the cash shortfall on the trade is
+\begin{equation}
+\label{eq:walk}
+n\left(y + \frac{n}{2q}\right).
+\end{equation}
+The displacement then decays with half-life \(h\),
+\begin{equation}
+\label{eq:decay}
+y_k = \beta\left(y_{k-1} + \frac{n_k}{q}\right) + \sigma_Y \varepsilon_k,
+\qquad
+\beta = 2^{-\tau/h},
+\end{equation}
+with \(\varepsilon_k\) standard normal and independent of \(\xi_k\). The runs in Section~\ref{sec:numbers} set \(\sigma_Y = 0\), so from a flat book the path of \(y\) is determined by the trades. The letter \(\rho\) on the reserve slides is the cost of holding cash, so the speed of the book is written as a half-life.
+
+Obizhaeva and Wang's risk-neutral seller, trading in continuous time, sells a block at the open, a block at the close, and a constant rate in between. Proposition~3, rewritten with the half-life in place of their resilience rate \(\ln 2 / h\), is
+\begin{equation}
+\label{eq:ow}
+n_0 = n_T = \frac{X h}{(\ln 2)\, T + 2h}, \qquad
+\text{rate} = \frac{(\ln 2)\, X}{(\ln 2)\, T + 2h}.
+\end{equation}
+The blocks do not depend on \(q\). At zero risk aversion, depth scales every strategy's cost by the same factor and drops out of the schedule. Two limits are used as checks. An infinite half-life means the book never refills, and every completed schedule costs \(X^{2}/(2q)\). A half-life that shrinks to zero, with continuous trading, makes a smooth schedule nearly free and the optimum degenerate. The pension does not have that freedom. The window is a fixed daily grid, and a book that has refilled before the next print is the Almgren--Chriss case in the next section.
+
+The fund sees \(y\) before it trades. The mid is observed. A benchmark for the unaffected price is the arrival price plus the market's own move. The difference is the displacement.
+
+\section{Shortfall}
+\label{sec:criterion}
+
+Perold's implementation shortfall is arrival value minus cash received,
+\begin{equation}
+\label{eq:is}
+\mathrm{IS} = XS_0 - \sum_{k=1}^{N} n_k \tilde S_k.
+\end{equation}
+The sale in a bar is priced off the unaffected price at the start of the bar, and \(\xi_k\) hits whatever inventory is left after the sale. That timing is Almgren and Chriss's, and it gives their variance. Substituting \eqref{eq:price} and \eqref{eq:walk},
+\begin{equation}
+\label{eq:split}
+\mathrm{IS}
+  = \sum_{k=1}^{N} n_k\left(y_{k-1} + \frac{n_k}{2q}\right)
+  - \sigma\sqrt{\tau}\sum_{j=1}^{N-1}\xi_j x_j.
+\end{equation}
+If the trade list does not look at the unaffected price, the cross term has mean zero and
+\begin{equation}
+\label{eq:moments}
+\mathbb{E}[\mathrm{IS}] = \mathbb{E}\!\left[\sum_{k=1}^{N} n_k\left(y_{k-1}+\frac{n_k}{2q}\right)\right],
+\qquad
+\mathrm{Var}_{\mathrm{price}}(\mathrm{IS}) = \sigma^{2}\tau\sum_{k=1}^{N}\mathbb{E}[x_k^{2}].
+\end{equation}
+A random refill adds variance to the walk itself. The penalty below does not include it. Almgren and Chriss have no random impact, and the penalty is theirs.
+
+The schedule is chosen by their mean-variance criterion,
+\begin{equation}
+\label{eq:J}
+J(\pi)
+  = \mathbb{E}[\mathrm{IS}]
+  + \lambda\,\sigma^{2}\tau\sum_{k=1}^{N}\mathbb{E}[x_k^{2}],
+\end{equation}
+with \(\lambda \geq 0\) in units of \(1/\mathrm{dollar}\). On a deterministic inventory path this is \(\mathbb{E}[\mathrm{IS}] + \lambda\,\mathrm{Var}(\mathrm{IS})\). Putting \(\mathrm{Var}(\mathrm{IS})\) itself into the objective does not work: the variance of terminal wealth is time-inconsistent. Almgren and Chriss already replace it, for deterministic schedules, by the inventory sum. That sum has a Bellman equation.
+
+\section{The dynamic program}
+
+\(V_k(x,y)\) is the remaining cost with inventory \(x\) and displacement \(y\), after \(k\) bars. The last trade sells whatever is left, and the inventory it leaves is zero, so there is no price-risk term:
+\begin{equation}
+\label{eq:terminal}
+V_{N-1}(x,y) = x\left(y + \frac{x}{2q}\right).
+\end{equation}
+Earlier,
+\begin{equation}
+\label{eq:bellman}
+V_k(x,y)
+  = \min_{0\leq n\leq x}
+    \left\{
+      n\left(y+\frac{n}{2q}\right)
+      + \lambda\sigma^{2}\tau(x-n)^{2}
+      + \mathbb{E}\bigl[V_{k+1}(x-n, y')\bigr]
+    \right\},
+\end{equation}
+with \(y'\) from \eqref{eq:decay}. The minimizer is a feedback rule \(n_k(x,y)\). From a flat book and with \(\sigma_Y = 0\) it produces one schedule. If the book is already displaced, the same rule sells less.
+
+The unaffected price is not a state. It enters \eqref{eq:split} only through a martingale whose conditional expectation is zero no matter what the fund sells. The schedule depends on the depth, the half-life, and \(\lambda\).
+
+\section{What the grid has to recover}
+\label{sec:limits}
+
+If \(\beta = 0\), the book is flat at the start of every bar and the impact cost of a schedule is \(\sum_k n_k^{2}/(2q)\). Then \eqref{eq:bellman} is
+\begin{equation}
+\label{eq:ac-bellman}
+V_k(x)
+  = \min_{0\leq n\leq x}
+    \left\{
+      \frac{n^{2}}{2q} + \lambda\sigma^{2}\tau(x-n)^{2} + V_{k+1}(x-n)
+    \right\}.
+\end{equation}
+Almgren and Chriss solve this in closed form. Their temporary coefficient \(\eta\) is defined so that trading \(n\) shares in one bar costs \((\eta/\tau)n^{2}\). Matching \eqref{eq:walk} at \(y = 0\) gives \(\eta = \tau/(2q)\). With permanent impact set to zero, their decay rate satisfies
+\begin{equation}
+\label{eq:cosh}
+\cosh(\kappa\tau) = 1 + \lambda\sigma^{2}\tau q,
+\end{equation}
+and the holdings are
+\begin{equation}
+\label{eq:sinh}
+x_j = X\,\frac{\sinh\bigl(\kappa(T-t_j)\bigr)}{\sinh(\kappa T)}, \qquad t_j = j\tau.
+\end{equation}
+(The \(\kappa\) in \eqref{eq:cosh} is their decay rate. The \(\kappa\) in Section~\ref{sec:kappa} is the reserve's cost per dollar. They are not the same quantity.) At \(\lambda = 0\) the holdings are a straight line, equal trades. Bertsimas and Lo get the same schedule for a quadratic temporary cost and a martingale price. The grid has to reproduce \eqref{eq:sinh} when \(\beta = 0\).
+
+The other check is risk-neutral Obizhaeva--Wang. At \(\lambda = 0\) and a finite half-life, a daily grid cannot place a continuous rate, but it can sell more on the first day and the last day than on the days between, and those endpoint trades approach \eqref{eq:ow} as the grid is refined. At \(\beta = 1\) and \(\lambda = 0\), every completed schedule costs \(X^{2}/(2q)\).
+
+\section{Q-learning}
+\label{sec:q}
+
+Inventory is an integer number of lots, \(0,1,\ldots,L\). Displacement is rounded to \(M\) nodes from \(0\) to \(X/q\), the walk from selling the whole block at once. A shock outside that interval is moved to the nearest end. The rounding is part of the problem being solved: the dynamic program and the learner face the same finite Markov decision process.
+
+In this section \(Q_k(x,y,n)\) is the action value, the cost of selling \(n\) lots now and acting optimally afterward. In Section~\ref{sec:kappa}, \(Q\) is the dollar shortfall. The action value obeys
+\begin{equation}
+\label{eq:qstar}
+Q_k(x,y,n)
+  = c(x,y,n) + \mathbb{E}\!\left[\min_{n'}Q_{k+1}(x-n, y', n')\right],
+\end{equation}
+with \(c\) the stage cost in \eqref{eq:bellman}. The terminal action value is the observed liquidation cost \eqref{eq:terminal}. Watkins's update replaces the expectation by a sample. After a transition to \((x',y')\) with observed cost \(c\),
+\begin{equation}
+\label{eq:watkins}
+Q_k(x,y,n)
+  \leftarrow
+  Q_k(x,y,n)
+  + \alpha\Bigl(c + \min_{n'}Q_{k+1}(x',y',n') - Q_k(x,y,n)\Bigr),
+\end{equation}
+and the step size is the sample average, \(\alpha = 1/(\text{number of visits})\).
+
+The horizon is filled from the deadline. The last bar has no continuation, so its value is the average of the observed liquidation costs. Each earlier bar is sampled only after the next bar has been filled, so the target in \eqref{eq:watkins} has stopped moving. With \(\sigma_Y = 0\) the transition is deterministic, one visit is the conditional expectation, and the sweep reproduces the dynamic program. With \(\sigma_Y > 0\), several draws are averaged at each state and action.
+
+Watkins and Dayan prove almost-sure convergence of \eqref{eq:watkins} for a discounted infinite horizon, under the usual conditions on the step sizes and on visiting every action forever. The argument used here is the finite-horizon one just given. Dollars are not discounted. The dynamic program computes the expectation from \eqref{eq:decay}. The learner receives the sampled cost and the sampled next displacement. It is not handed \(\beta\), \(q\), or \(\sigma_Y\). In the language of Sutton and Barto, the decay rule is a model of the environment, and the sweep does without one.
+
+The same update, run forward from a table of zeros, does not settle in a practical number of episodes. The target takes a minimum, and an action that has never been tried then looks free. Filling backward avoids that. A bar is sampled only after every legal action on the next bar has a value.
+
+Hendricks and Wilcox also fill a table with Watkins's update. Their action multiplies a fixed Almgren--Chriss slice by a factor between \(0\) and \(2\), and the book is assumed to have recovered before the next bar. The action in \eqref{eq:bellman} is the number of lots. The state their table does not carry is the displacement those lots leave behind.
+
+\subsection*{Why this algorithm, and not the others}
+
+The fixed point of \eqref{eq:watkins}, filled backward, is the minimizer of \eqref{eq:bellman}. That is what the calculation is for: the same schedule, when the transition is sampled and the decay rule is not supplied. Three standard learners optimize something else.
+
+A deep Q-network stores the action value in a neural net and trains it from a replay buffer, with a discounted target (Mnih et al.). The net is the right tool when the state will not fit in a table. Ning, Lin, and Jaimungal use a double deep Q-network for execution in that setting. Here, after the grid is chosen, the state on a bar is two integers, the horizon is known, and \eqref{eq:bellman} is an undiscounted sum of dollars. A net would replace the match with the dynamic program by an approximation error. A discount would change the sum.
+
+Proximal policy optimization updates a parameterized policy from sampled returns, with a clipped likelihood ratio (Schulman et al.). It does not form the action value, so there is no cell to compare with the dynamic program. The policy here is a table of lot counts.
+
+Soft actor-critic maximizes return plus the entropy of a continuous action (Haarnoja et al.). The entropy term is a different objective from \(\mathbb{E}[\mathrm{IS}]\) and from Almgren and Chriss's \(E[I]+\lambda V[I]\). The action here is a whole number of lots.
+
+\section{The bill the reserve uses}
+\label{sec:kappa}
+
+\(J\) chooses the schedule. The reserve uses the expected bill for following it. With \(X = Q/S_0\),
+\begin{equation}
+\label{eq:bill}
+C(Q)
+  = \varepsilon X + \frac{\gamma}{2} X^{2}
+  + \mathbb{E}\!\left[\sum_{k=1}^{N} n_k\left(y_{k-1}+\frac{n_k}{2q}\right)\right],
+\end{equation}
+and
+\begin{equation}
+\label{eq:kappa}
+\kappa(Q) = \frac{C(Q)}{Q} = \frac{C(Q)}{X S_0}.
+\end{equation}
+The tables report \(10{,}000\,\kappa\), in basis points. One basis point is one dollar of cost per ten thousand dollars of shortfall.
+
+When the book refills before the next trade, \(\lambda = 0\), and the trades are equal, the walk is \(X^{2}/(2qN) = (\eta/T)X^{2}\). Then \eqref{eq:bill} is the risk-neutral formula on the reserve slide,
+\[
+  E_{\min}(X) = \varepsilon X + \left(\frac{\gamma}{2} + \frac{\eta}{T}\right) X^{2}.
+\]
+Risk aversion changes \(C\) only by changing the schedule. The reserve slide sets \(\lambda = 0\), so the schedule minimizes the expected walk and the variance penalty is not inside \(C\). The price-risk standard deviation,
+\[
+  \frac{\sigma\sqrt{\tau\sum_k x_k^{2}}}{X S_0},
+\]
+is the penalty on the Almgren--Chriss slide that precedes the reserve. It is large, because a multi-day sale still holds a large position. At \(\lambda = 0\) it does not enter the reserve.
+
+Allison's problem is \(\min_R\{ c R + \mathbb{E}[C(Q(R))] \}\), with \(c\) the cost of holding a dollar of cash and \(Q(R) = \max\{L-R, 0\}\). Jasmine's flat-cost version has \(\varepsilon^{\star} = \rho/\kappa\), where her \(\rho\) is Allison's \(c\) and her \(\kappa\) is a constant cost per dollar. Her \(\lambda\) is the Poisson rate at which a buyer appears for the private stake. Almgren--Chriss \(\lambda\) is a risk aversion. The half-life of the public book is \(h\).
+
+The flat-cost rule is \(C(q) = \kappa q\) with \(\kappa\) independent of \(q\). The bill \eqref{eq:bill} is linear in the fee and quadratic in the number of shares. For \(C(q) = aq + bq^{2}\),
+\begin{equation}
+\label{eq:foc}
+\frac{d}{dR}\,\mathbb{E}[C(Q(R))]
+  = -a\,\Pr(L > R) - 2b\,\mathbb{E}[Q].
+\end{equation}
+The minimum over the reserve sets \(c\) equal to \(a\,\Pr(L>R) + 2b\,\mathbb{E}[Q]\). Jasmine's rule is the case \(b = 0\), with \(\kappa = a\). A quadratic bill uses both the probability of a shortfall and the expected shortfall. The tables are the curve. At one stated shortfall they also give the single \(\kappa(Q)\) her rule asks for, and that number belongs to that shortfall.
+
+On the day the reserve is short, the sale is the minimizer of \eqref{eq:bellman} at \(\lambda = 0\), the rule \(n_k(x,y)\).
+
+\section{Numbers}
+\label{sec:numbers}
+
+The book below is an illustration, not a fit to a fund's tape. The shortfall is \(Q = 5\) million dollars, sold as \(X = 100{,}000\) shares at \(S_0 = 50\). One basis point is \(500\) dollars. The window is \(N = 10\) days. Daily volatility is \(\sigma = 1\) dollar, two percent of the price. Depth is \(q = 200{,}000\) shares per dollar, so selling the whole block at once walks the mid by \(50\) cents and the average fill is \(25\) cents worse, \(50\) basis points of arrival value. Risk aversion, the fee, and permanent impact are zero, so \(C\) is the expected walk. The grid is \(40\) lots by \(41\) displacement nodes.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{4}{c}{\(\kappa\), basis points} \\
+\cmidrule(lr){2-5}
+Half-life & Refill & Equal trades & Optimal & Learner \\
+\midrule
+within the day & 5.00 & 5.00 & 5.00 & 5.00 \\
+0.5 day        & 5.00 & 7.25 & 7.25 & 7.25 \\
+1 day          & 5.00 & 11.50 & 10.81 & 10.81 \\
+2 days         & 5.00 & 20.25 & 17.94 & 17.94 \\
+5 days         & 5.00 & 32.75 & 27.50 & 27.50 \\
+10 days        & 5.00 & 39.50 & 34.25 & 34.25 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The refill column is \(E_{\min}\) with \(\varepsilon = \gamma = 0\). It assumes the book has recovered, so the half-life does not appear. Within the day, \(\beta = 0\), and the formula, equal trades, and the dynamic program are the same sale: \(5.00\) basis points, \(2{,}500\) dollars. At a half-day the grid does not beat equal trades. Both cost \(7.25\) basis points. From one day on, the best schedule beats equal trades in the book that is actually there, and both cost more than the refill formula. At one day the formula says \(5.00\), equal trades cost \(11.50\), and the best schedule costs \(10.81\), which is \(5{,}406\) dollars and \(\kappa = 0.001081\) per dollar. At ten days the best schedule is \(34.25\) basis points. Most of the correction, at one day, is persistence: \(5.00\) against \(10.81\). Reoptimization is the smaller gap, \(11.50\) against \(10.81\).
+
+Minimizing the expected bill does not hold price risk down. At a one-day half-life the best schedule has price-risk standard deviation \(356.72\) basis points, against \(337.64\) for equal trades. At ten days it is \(421.78\), against the same \(337.64\). The variance penalty is a separate choice. Its reference value equates the penalty for carrying the whole shortfall over the whole window with the one-shot walk \(X^{2}/(2q)\),
+\begin{equation}
+\label{eq:lamref}
+\lambda_{\mathrm{ref}} = \frac{1}{2q\sigma^{2}T} = 2.5\times 10^{-7}
+\end{equation}
+per dollar in the normal book. At that value, and with the book refilled within the day, equal trades have \(J = 9{,}625\) dollars and the hyperbolic schedule has \(J = 6{,}795\), with expected bills \(5.00\) and \(8.12\) basis points. The reserve does not use this \(\lambda\). It uses the risk aversion on the reserve slide, which is zero.
+
+The downturn in the table below is the public book the shares are sold into, after \(Q > 0\). Same shortfall, same ten days, same risk aversion. Half-life five days, volatility two dollars, depth \(100{,}000\) shares per dollar. It is separate from Jasmine's crisis, which slows the Poisson rate at which a buyer appears for the private stake. At \(\lambda = 0\), volatility does not enter \(C\). It scales the price-risk standard deviation, from \(337.64\) basis points to \(675.28\). Halving the depth is what moves the refill formula, from \(5.00\) to \(10.00\).
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{4}{c}{\(\kappa\), basis points} \\
+\cmidrule(lr){2-5}
+Downturn book & Refill & Equal trades & Optimal & Learner \\
+\midrule
+refill assumed   & 10.00 & 10.00 & 10.00 & 10.00 \\
+half-life 5 days & 10.00 & 65.50 & 55.00 & 55.00 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+With a five-day half-life the best schedule costs \(55.00\) basis points, \(27{,}500\) dollars, \(\kappa = 0.0055\). Equal trades in that book cost \(65.50\). The same half-life at the original depth costs \(27.50\). The ratio is the ratio of the depths. A reserve that uses \(10.00\), the refill formula at the new depth, is sized for a sale the fund cannot make.
+
+The walk scales as \(X^{2}\), so \(\kappa\) scales as \(Q\). Doubling the shortfall doubles the cost per dollar.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+& \multicolumn{3}{c}{Normal book, half-life one day} \\
+\cmidrule(lr){2-4}
+Shortfall \(Q\) & Refill & Equal trades & Optimal \\
+\midrule
+\$1.25 million & 1.25 & 2.88 & 2.70 \\
+\$2.5 million  & 2.50 & 5.75 & 5.41 \\
+\$5 million    & 5.00 & 11.50 & 10.81 \\
+\$10 million   & 10.00 & 23.00 & 21.62 \\
+\midrule
+& \multicolumn{3}{c}{Downturn book, half-life five days} \\
+\cmidrule(lr){2-4}
+\$1.25 million & 2.50 & 16.38 & 13.75 \\
+\$2.5 million  & 5.00 & 32.75 & 27.50 \\
+\$5 million    & 10.00 & 65.50 & 55.00 \\
+\$10 million   & 20.00 & 131.00 & 110.00 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Entries are \(\kappa\) in basis points. Down the Optimal column the figure doubles when the shortfall doubles. A single \(\kappa\) is one row of that curve. Allison's expectation uses the column. Jasmine's flat-cost tolerance uses the row for a stated shortfall and a stated book. At five million dollars that is \(0.001081\) in the normal one-day book and \(0.0055\) in the downturn book.
+
+The Learner column is the sweep in Section~\ref{sec:q}, scored on the same grid. It repeats Optimal on every row, and the dollar objective agrees to the cent. At \(\lambda = 0\) that objective is the walk. The learner was not given the half-life or the depth. On these runs the samples are drawn from the same book the dynamic program uses, which is why the two can be compared. The agreement is the check. The number that goes into the reserve is \(C\).
+
+On a coarser grid, \(20\) lots and \(31\) displacement nodes, the same sweep is easier to read as a curve. In the normal book with a one-day half-life, before any earlier bar has been sampled the greedy rule sells nothing until the deadline. The bill is the one-shot walk, \(25{,}000\) dollars. After the bars are filled from the deadline backward, the cost falls, and after \(64{,}449\) state-actions it equals the dynamic program at \(6{,}167\) dollars. On the downturn the same line sits at \(27{,}167\) dollars. The finer grid in the tables has a one-day bill of \(5{,}406\) dollars and a downturn bill of \(27{,}500\).
+
+\begin{thebibliography}{99}
+
+\bibitem{almgren2001}
+R.~Almgren and N.~Chriss.
+Optimal execution of portfolio transactions.
+\emph{Journal of Risk}, 3(2):5--39, 2001.
+\href{https://doi.org/10.21314/JOR.2001.041}{doi:10.21314/JOR.2001.041}.
+Temporary impact, the variance \(V(x)=\sigma^{2}\tau\sum_k x_k^{2}\), and the hyperbolic holdings are equations (5), (7), and (17) of the December 2000 working paper, which the article publishes. The reserve slide uses the risk-neutral minimum, equations (9)--(10), p.~12.
+
+\bibitem{bertsimas1998}
+D.~Bertsimas and A.~W. Lo.
+Optimal control of execution costs.
+\emph{Journal of Financial Markets}, 1(1):1--50, 1998.
+\href{https://doi.org/10.1016/S1386-4181(97)00012-8}{doi:10.1016/S1386-4181(97)00012-8}.
+
+\bibitem{haarnoja2018}
+T.~Haarnoja, A.~Zhou, P.~Abbeel, and S.~Levine.
+Soft actor-critic: off-policy maximum entropy deep reinforcement learning with a stochastic actor.
+In \emph{Proceedings of the 35th International Conference on Machine Learning}, PMLR 80:1861--1870, 2018.
+\href{https://arxiv.org/abs/1801.01290}{arXiv:1801.01290}.
+
+\bibitem{hendricks2014}
+D.~Hendricks and D.~Wilcox.
+A reinforcement learning extension of the Almgren--Chriss framework for optimal trade execution.
+In \emph{IEEE Conference on Computational Intelligence for Financial Engineering and Economics}, 2014.
+The PDF is in \texttt{references/papers/}.
+
+\bibitem{mnih2015}
+V.~Mnih, K.~Kavukcuoglu, D.~Silver, et al.
+Human-level control through deep reinforcement learning.
+\emph{Nature}, 518:529--533, 2015.
+\href{https://doi.org/10.1038/nature14236}{doi:10.1038/nature14236}.
+
+\bibitem{ning2018}
+B.~Ning, F.~H.~Y. Lin, and S.~Jaimungal.
+Double deep Q-learning for optimal execution.
+arXiv:1812.06600, 2018.
+Later published in \emph{Applied Mathematical Finance}, 2021.
+
+\bibitem{obizhaeva2013}
+A.~A. Obizhaeva and J.~Wang.
+Optimal trading strategy and supply/demand dynamics.
+\emph{Journal of Financial Markets}, 16(1):1--32, 2013.
+\href{https://doi.org/10.1016/j.finmar.2012.09.001}{doi:10.1016/j.finmar.2012.09.001}.
+Proposition~3. The working paper is NBER w11444.
+
+\bibitem{perold1988}
+A.~F. Perold.
+The implementation shortfall: paper versus reality.
+\emph{Journal of Portfolio Management}, 14(3):4--9, 1988.
+
+\bibitem{schulman2017}
+J.~Schulman, F.~Wolski, P.~Dhariwal, A.~Radford, and O.~Klimov.
+Proximal policy optimization algorithms.
+arXiv:1707.06347, 2017.
+
+\bibitem{sutton2018}
+R.~S. Sutton and A.~G. Barto.
+\emph{Reinforcement Learning: An Introduction}.
+2nd ed., MIT Press, 2018, \S 1.3.
+The authors' copy is at \url{http://incompleteideas.net/book/the-book-2nd.html}.
+
+\bibitem{watkins1992}
+C.~J.~C.~H. Watkins and P.~Dayan.
+Q-learning.
+\emph{Machine Learning}, 8(3--4):279--292, 1992.
+\href{https://doi.org/10.1007/BF00992698}{doi:10.1007/BF00992698}.
+
+\end{thebibliography}
+
+\end{document}
