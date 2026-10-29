@@ -2,7 +2,7 @@
 
 APMA 4903, November 2026. Daniel Holland, with Allison Duffy and Jasmine Li.
 
-The note is [notes/execution-math.pdf](notes/execution-math.pdf). It prices the sale of a cash shortfall when yesterday's trade is still in the book, and it checks that schedule with tabular Q-learning. The slides are [notes/execution-slides.pdf](notes/execution-slides.pdf). The papers named on the slides are listed in [references/README.md](references/README.md).
+The note is [notes/execution-math.pdf](notes/execution-math.pdf). It prices the sale of a cash shortfall when yesterday's trade is still in the book, and it checks that schedule with tabular Q-learning. The papers cited in that work are listed in [references/README.md](references/README.md).
 
 ## Run
 
